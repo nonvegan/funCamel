@@ -1,31 +1,5 @@
 (* Genealogy module body *)
 
-(* 
-Aluno 1: ????? mandatory to fill
-Aluno 2: ????? mandatory to fill
-
-Comment:
-
-?????????????????????????
-?????????????????????????
-?????????????????????????
-?????????????????????????
-?????????????????????????
-?????????????????????????
-
-*)
-
-(*
-0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
-   100 columns
-*)
-
-
-(* COMPILATION - How to build this module (used by Mooshak))
-         ocamlc -c Genealogy.mli Genealogy.ml
-*)
-
-
 (* AUXILIARY BASIC FUNCTIONS - you can add more *)
 
 let rec uniq l =
@@ -140,7 +114,13 @@ let rec parents rep l = (* get all the parents of the list l *)
 	let (a,b) = cut2 rep l in
 		all1 a
 
+let rec hasSomeone rep x = match rep with
+                             | [] -> false
+                             | (y,_)::yx -> y=x || hasSomeone yx x
+
 let rootAName aTree = match aTree with ANode(aName,_,_) -> aName
+
+let rootDName dTree = match dTree with DNode(dName,_) -> dName
 
 let rec pairFromName rep name =
         match rep with
@@ -180,10 +160,6 @@ let rec makeATree rep a =
                   | x::y::xs -> ANode(a,makeATree rep x, makeATree rep y)
                   | list -> ANode(a,ANil,ANil)
 
-(* FUNCTION repOfATree ->wrong order, needs join func *)
-
-let rec repOfATree t = []  
-
 (* FUNCTION makeDTree *)
 
 let rec makeDTree rep a =
@@ -191,11 +167,6 @@ let rec makeDTree rep a =
                 match childrenA with
                   | [] -> DNode(a,[])
                   | list -> DNode(a,map (fun child -> makeDTree rep child) childrenA)  
-
-(* FUNCTION repOfDTree *)
-
-let repOfDTree t =
-	[]
 
 (* FUNCTION descendantsN *)
 
@@ -220,13 +191,12 @@ let siblingsInbreeding rep =
 
 (* FUNCTION waveN *)
 
-let rec waveN rep n lst =
-        []
+let rec fullWaveN rep n lst = if n = 0 then lst else clean (lst @ fullWaveN rep (n - 1) (union (parents rep lst) (children rep lst)))
+
+let waveN rep n lst = if n = 0 then lst else diff (fullWaveN rep n lst) (fullWaveN rep (n - 1) lst)
+
 (* FUNCTION merge *)
 
-let rec hasSomeone rep x = match rep with
-                             | [] -> false
-                             | (y,_)::yx -> y=x || hasSomeone yx x
 let rec merge rep1 rep2 =
 	match rep1 with
           | [] -> rep2
@@ -259,3 +229,21 @@ let rec validSemantic rep =
 	match rep with 
           | [] -> true
           | (root,children)::xs -> not(mem root children) && (len children <= 2) && validSemantic xs;;
+
+
+(* FUNCTION repOfATree ->wrong order, needs join func *)
+
+let rec repOfATree t = 
+        match t with
+          | ANode(x,ANil,ANil) -> [(x,[])]
+          | ANode(x,ANode(y,l,r),ANil) ->  merge [(x,[]);(y,[x])] (repOfATree (ANode(y,l,r)))
+          | ANode(x,ANil,ANode(y,l,r)) ->  merge [(x,[]);(y,[x])] (repOfATree (ANode(y,l,r)))
+          | ANode(x,ANode(y,ly,ry),ANode(z,lz,rz)) -> merge [(x,[]);(y,[x]);(z,[x])] (merge (repOfATree (ANode(y,ly,ry))) (repOfATree (ANode(z,lz,rz))))
+
+(* FUNCTION repOfDTree *)
+
+let rec repOfDTree t =
+	match t with 
+          | DNode(x,[]) -> [(x,[])]
+          | DNode(x,children) -> merge [(x,map rootDName children)] (List.fold_left (merge) [] (map repOfDTree children))
+
